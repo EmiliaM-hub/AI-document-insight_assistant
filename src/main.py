@@ -74,8 +74,6 @@ def main():
     Główna funkcja programu – wybiera dokument, analizuje go i generuje streszczenie.
     """
 
-    print("kopytko")
-
     # Jeśli użytkownik podał argument (ścieżka lub URL) – używamy go bez pytania
     if len(sys.argv) >= 2:
         target = sys.argv[1]
