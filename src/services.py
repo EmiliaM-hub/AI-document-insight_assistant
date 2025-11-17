@@ -210,25 +210,27 @@ def analyze_document(file_path_or_url: str) -> Dict[str, object]:
             # Analiza PDF przez Form Recognizer
             print("[INFO] Analiza PDF przez Azure Form Recognizer...")
             result = extract_text_from_pdf_via_form_recognizer(file_path)
-            return {
-                "text": result["text"],
-                "page_count": result["page_count"],
-                "source": file_path,
-            }
-
+            
         elif suffix == ".docx":
             # DOCX – lokalny odczyt, bo Form Recognizer czasem zgłasza InvalidContent
             print("[INFO] Analiza DOCX lokalnie (python-docx)...")
             result = extract_text_from_docx_local(file_path)
-            return {
-                "text": result["text"],
-                "page_count": result["page_count"],
-                "source": file_path,
-            }
-
+            
         else:
             raise ValueError(f"Nieobsługiwane rozszerzenie pliku: {suffix}")
-
+        
+        # Generuje streszczenie i kluczowe punkty
+        print("[INFO] Generowanie streszczenia i kluczowych punktów...")
+        from src.summarizer import generate_insights
+        
+        insights = generate_insights(result["text"])
+        
+        # Dodaje do wyniku
+        result["summary"] = insights.get("summary", "")
+        result["key_points"] = insights.get("key_points", [])
+        result["source"] = file_path
+        
+        return result
     finally:
         # Usunięcie pliku tymczasowego, jeśli pochodził z URL
         if remove_after:

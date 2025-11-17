@@ -1,5 +1,7 @@
 azure-ai-formrecognizer
 azure-core
 openai
+gradio
+python-docx
 python-dotenv
 requests

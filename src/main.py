@@ -2,9 +2,9 @@ import sys
 import json
 from pathlib import Path
 
-from .config import MAX_CHARS_FOR_SUMMARY, REPO_DOCS_DIR
-from .services import analyze_document
-from .summarizer import generate_insights
+from src.config import MAX_CHARS_FOR_SUMMARY, REPO_DOCS_DIR
+from src.services import analyze_document
+from src.summarizer import generate_insights
 
 
 def list_repo_documents() -> list[Path]:
@@ -71,7 +71,7 @@ def choose_document_interactively() -> str:
 
 def main():
     """
-    Główna funkcja programu – wybiera dokument, analizuje go i generuje streszczenie.
+    Główna funkcja programu - wybiera dokument, analizuje go i generuje streszczenie.
     """
 
     # Jeśli użytkownik podał argument (ścieżka lub URL) – używamy go bez pytania

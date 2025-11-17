@@ -10,7 +10,7 @@ Program działa jako **prosta aplikacja CLI** (z linii komend) i może pracować
 - na **dokumentach przykładowych** przechowywanych w repozytorium (folder `docs/`).
 
 ### Zakres prac
-1. Przygotowanie zestawu dokumentów testowych (wykorzystane zostały doc z https://www.kaggle.com/datasets) 
+1. Przygotowanie zestawu dokumentów testowych (wykorzystane zostały doc z https://www.kaggle.com/datasets) oraz kilka dodatkowych materiałów wyszukanych w internecie
 2. Konfiguracja i użycie **Azure Form Recognizer SDK**
 3. Integracja z **Azure OpenAI SDK** (generacja streszczeń i kluczowych punktów)
 4. Testy jakości (trafność, kompletność streszczeń)
@@ -48,11 +48,13 @@ ai-document-insight/
 │  └─ test_docs/             # folder z przykładowymi dokumentami PDF/DOCX
 ├─ src/
 │  ├─ main.py                # punkt wejściowy, logika uruchomienia aplikacji (CLI)
+│  ├─ app.py                 # interfejs Gradio (webowy UI)
 │  ├─ config.py              # konfiguracja projektu, ładowanie zmiennych z .env
 │  ├─ services.py            # integracja z Azure, analiza dokumentów, obsługa źródeł
 │  └─ summarizer.py          # budowanie promptów, generowanie streszczeń
 ├─ requirements.txt          # lista wymaganych bibliotek Pythona
 ├─ .env.sample               # dane konfiguracyjne (endpointy, klucze, wersje API)
+├─ .gitignore                # pliki ignorowane przez git
 └─ README.md                 # plik z opisem projektu
 ```
 
@@ -67,8 +69,23 @@ ai-document-insight/
     - endpointy i klucze do usług Azure,
     - nazwę deploymentu modelu Azure OpenAI,
     - limit długości tekstu dokumentu przekazywanego do modelu,
-    - ścieżkę do folderu `docs/`.
+    - ścieżkę do dokumentów wejściowych - domyślnie `docs/`, z możliwością nadpisania poprzez zmienną środowiskową `REPO_DOCS_DIR`.
   - Wszystkie dane wrażliwe (klucze, endpointy) wczytywane są ze zmiennych środowiskowych.
+  - Przy braku wymaganych paramentrów zgłasza błąd.
+
+- **`src/app.py`**
+  - Graficzny interfejs użytkownika uruchamiany w przeglądarce (Gradio):
+    - ładuje konfigurację oraz listę dokumentów testowych,
+    - pozwala wybrać sposób pobrania dokumentu:
+      - przesłanie lokalnego pliku (upload),
+      - podanie adresu URL (np. GitHub),
+      - wybór pliku z folderu testowego (`data/test_docs/`),
+    - uruchamia pipeline poprzez `analyze_document()`:
+      - ekstrakcja tekstu → streszczenie + kluczowe punkty → metadane,
+    - prezentuje wynik w trzech polach:
+      - streszczenie,
+      - kluczowe punkty (punktowana lista),
+      - status wraz z metadanymi (nazwa źródła, liczba stron raportowana przez ekstrakcję, liczba znaków w pełnym tekście oryginalnym, liczba znaków w wygenerowanym streszczeniu).
 
 - **`src/services.py`**
   - Warstwa integracji z zewnętrznymi usługami:
@@ -128,7 +145,7 @@ ai-document-insight/
   - **Azure AI Document Intelligence (Form Recognizer)**
   - **Azure OpenAI** (z wdrożonym modelem)
 - Plik `.env` z odpowiednimi zmiennymi środowiskowymi
-
+- **Gradio** (dla interfejsu webowego)
 ---
 
 ## Konfiguracja środowiska
@@ -298,7 +315,28 @@ Plik JSON zawiera m.in.:
   ]
 }
 ```
+## Interfejs graficzny (Gradio)
 
+Projekt zawiera również **interfejs webowy** do wygodnej analizy dokumentów przez przeglądarkę.
+
+### Uruchomienie interfejsu Gradio:
+```bash
+python src/app.py
+```
+Następnie otwórz w przeglądarce: **http://127.0.0.1:7860**
+
+### Funkcje interfejsu:
+- Upload plików PDF/DOCX przez przeglądarkę
+- Automatyczna analiza i wyświetlanie wyników w formie streszczenia i kluczowych punktów
+- Informacje o statusie przetwarzania
+
+## Screenshots
+
+### Interfejs Gradio
+![Gradio UI](screenshots/gradio_ui.png)
+
+### Przykład wyniku
+![Przykład streszczenia](screenshots/example_result.png)
 ---
 
 ## Technologie i biblioteki
@@ -327,8 +365,16 @@ Plik JSON zawiera m.in.:
 | `azure-ai-formrecognizer` | Klient usługi Azure Form Recognizer |
 | `azure-core` | Podstawowe klasy Azure (poświadczenia, obsługa błędów) |
 | `openai` | Klient Azure OpenAI |
-| `pathlib` *(standardowa biblioteka)* | Praca ze ścieżkami plików |
-| `json`, `sys` *(standardowe moduły)* | Przetwarzanie danych i argumentów programu |
+| `gradio` | Interfejs webowy do uploadu dokumentów |
+| `python-docx` | Obsługa plików DOCX |
+| `python-dotenv` | Wczytywanie zmiennych z .env |
+| `requests` | Pobieranie plików z URL |
+
+### Moduły standardowe Python (nie wymagają instalacji):
+- `pathlib` – praca ze ścieżkami plików
+- `json` – przetwarzanie danych JSON
+- `sys`, `os` – obsługa argumentów i systemu plików
+- `typing` – adnotacje typów
 
 ---
 ## Rozwiązywanie najczęstszych problemów
@@ -423,6 +469,25 @@ Plik JSON zawiera m.in.:
 - Możesz ją **zmniejszyć** (bezpieczniej),  
 - lub zaimplementować **dzielenie dokumentu na fragmenty** i streszczanie sekcjami (bardziej zaawansowane rozwiązanie).
 
+---
+
+### 7. Brak streszczenia w interfejsie Gradio (puste pola)
+
+**Objawy:**
+- Interfejs Gradio wyświetla status "Przeanalizowano", ale brak streszczenia i kluczowych punktów
+
+**Możliwe przyczyny i rozwiązania:**
+- Funkcja `analyze_document()` nie wywołuje `generate_insights()` z `summarizer.py`
+-**Rozwiązanie:**
+1. Otwórz `src/services.py`
+2. Znajdź funkcję `analyze_document()`
+3. Przed `return result` dodaj:
+```python
+from src.summarizer import generate_insights
+insights = generate_insights(result["text"])
+result["summary"] = insights.get("summary", "")
+result["key_points"] = insights.get("key_points", [])
+```
 ---
 
 ## Licencja
